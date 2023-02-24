@@ -1,0 +1,808 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Description: Crea un bucket S3
+
+
+Parameters:
+  # MyKeyPair:
+  #   Type: String
+  #   Description: Public key material for EC2 key pair
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  AcmCertificate:
+    Description: The ARN of the AWS Certification Manager's Certificate 
+    Type: String
+
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t3.micro
+      - t2.nano
+      - t2.micro
+    ConstraintDescription: must be a valid EC2 instance type.
+
+  # RDS Parameters
+  # DatabaseInstanceIdentifier:
+  #   AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+  #   ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+  #   Default: mysql57db
+  #   Description: Instance identifier name
+  #   MaxLength: 60
+  #   MinLength: 1
+  #   Type: String
+
+  # DatabaseName:
+  #   AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+  #   ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+  #   Default: applicationdb
+  #   Description: MySQL database name
+  #   MaxLength: 64
+  #   MinLength: 1
+  #   Type: String
+
+  # DatabaseUser:
+  #   AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+  #   ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+  #   Default: dbadmin
+  #   Description: Username for MySQL database access
+  #   MaxLength: 16
+  #   MinLength: 1
+  #   NoEcho: true
+  #   Type: String
+
+  # DatabasePassword:
+  #   AllowedPattern: '[a-zA-Z0-9]*'
+  #   ConstraintDescription: Must contain only alphanumeric characters
+  #   Default: database1407
+  #   Description: Password for MySQL database access
+  #   MaxLength: 41
+  #   MinLength: 8
+  #   NoEcho: true
+  #   Type: String
+
+  # DatabaseBackupRetentionPeriod:
+  #   ConstraintDescription: Database backup retention period must be between 0 and 35 days
+  #   Default: 0
+  #   Description: The number of days for which automatic DB snapshots are retained
+  #   MaxValue: 35
+  #   MinValue: 0
+  #   Type: Number
+
+  # DatabaseAllocatedStorage:
+  #   ConstraintDescription: Must be between 5 and 1024Gb
+  #   Default: 20
+  #   Description: The size of the database (Gb)
+  #   MaxValue: 65536
+  #   MinValue: 5
+  #   Type: Number
+
+  # DatabaseInstanceClass:
+  #   AllowedValues:
+  #     - db.t1.micro
+  #     - db.t2.micro
+  #     - db.m1.small
+  #     - db.m1.medium
+  #     - db.m1.large
+  #   ConstraintDescription: Must select a valid database instance type
+  #   Default: db.t2.micro
+  #   Description: The database instance type
+  #   Type: String
+
+  # MultiAZDatabase:
+  #   AllowedValues:
+  #     - true
+  #     - false
+  #   ConstraintDescription: Must be either true or false
+  #   Default: false
+  #   Description: Creates a Multi-AZ MySQL Amazon RDS database instance
+  #   Type: String
+
+# Metadata:
+  
+# Mappings:
+  
+# Conditions:
+
+Mappings:
+  RegionMap:
+    # Ubuntu Linux (Debian-based)
+    us-east-1:
+     AMI: ami-0557a15b87f6559cf
+    us-west-2:
+     "AMI": "ami-09cd747c78a9add63"
+    # Amazon Linux (Red-Hat-based)
+    # us-east-1:
+    #  "AMI": "ami-0ed9277fb7eb570c9"
+    # us-west-2:
+    #  "AMI": "ami-00f7e5c52c0f43726"
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16 
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      # InstanceTenancy: String
+      # Ipv4IpamPoolId: String
+      # Ipv4NetmaskLength: Integer
+      Tags:
+        - Key: Name
+          Value: LUIT CF Project
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: LUIT CF Project
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+      # VpnGatewayId: String
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: LUIT CF Project Public Subnet (AZ1)
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs  '']
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: LUIT CF Project Public Subnet (AZ2)
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs  '']
+      CidrBlock: 10.0.11.0/24
+      MapPublicIpOnLaunch: false
+      Tags: 
+        - Key: Name
+          Value: LUIT CF Project Private Subnet (AZ1)
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      # AssignIpv6AddressOnCreation: Boolean
+      AvailabilityZone: !Select [1, !GetAZs  '']
+      # AvailabilityZoneId: String
+      CidrBlock: 10.0.12.0/24
+      # EnableDns64: Boolean
+      # Ipv6CidrBlock: String
+      # Ipv6Native: Boolean
+      MapPublicIpOnLaunch: false
+      # OutpostArn: String
+      # PrivateDnsNameOptionsOnLaunch: 
+      #   PrivateDnsNameOptionsOnLaunch
+      Tags:
+        - Key: Name
+          Value: LUIT CF Project Private Subnet (AZ2)
+      VpcId: !Ref VPC
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: LUIT CF Project Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties: 
+      # CarrierGatewayId: String
+      DestinationCidrBlock: 0.0.0.0/0
+      # DestinationIpv6CidrBlock: String
+      # EgressOnlyInternetGatewayId: String
+      GatewayId: !Ref InternetGateway
+      # InstanceId: String
+      # LocalGatewayId: String
+      # NatGatewayId: String
+      # NetworkInterfaceId: String
+      RouteTableId: !Ref PublicRouteTable
+      # TransitGatewayId: String
+      # VpcEndpointId: String
+      # VpcPeeringConnectionId: String
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP from 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+
+  # EC2Instance:
+  #   Type: AWS::EC2::Instance
+  #   Properties: 
+  #   #   AdditionalInfo: String
+  #   #   Affinity: String
+  #     # AvailabilityZone: !Select [1, !GetAZs  '']
+  #   #   BlockDeviceMappings: 
+  #   #     - BlockDeviceMapping
+  #   #   CpuOptions: 
+  #   #     CpuOptions
+  #   #   CreditSpecification: 
+  #   #     CreditSpecification
+  #   #   DisableApiTermination: Boolean
+  #   #   EbsOptimized: Boolean
+  #   #   ElasticGpuSpecifications: 
+  #   #     - ElasticGpuSpecification
+  #   #   ElasticInferenceAccelerators: 
+  #   #     - ElasticInferenceAccelerator
+  #   #   EnclaveOptions: 
+  #   #     EnclaveOptions
+  #   #   HibernationOptions: 
+  #   #     HibernationOptions
+  #   #   HostId: String
+  #   #   HostResourceGroupArn: String
+  #   #   IamInstanceProfile: String
+  #     ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+  #   #   InstanceInitiatedShutdownBehavior: String
+  #     InstanceType: t2.micro
+  #   #   Ipv6AddressCount: Integer
+  #   #   Ipv6Addresses: 
+  #   #     - InstanceIpv6Address
+  #   #   KernelId: String
+  #     KeyName: !Ref KeyName
+  #   #   LaunchTemplate: 
+  #   #     LaunchTemplateSpecification
+  #   #   LicenseSpecifications: 
+  #   #     - LicenseSpecification
+  #   #   Monitoring: Boolean
+  #   #   NetworkInterfaces: 
+  #   #     - NetworkInterface
+  #   #   PlacementGroupName: String
+  #   #   PrivateDnsNameOptions: 
+  #   #     PrivateDnsNameOptions
+  #   #   PrivateIpAddress: String
+  #   #   PropagateTagsToVolumeOnCreation: Boolean
+  #   #   RamdiskId: String
+  #     SecurityGroupIds: 
+  #       - !Ref MySecurityGroup
+  #   #   SecurityGroups: 
+  #   #     - String
+  #   #   SourceDestCheck: Boolean
+  #   #   SsmAssociations: 
+  #   #     - SsmAssociation
+  #     SubnetId: !Ref PublicSubnet1
+  #     Tags:
+  #      - Key: Name
+  #        Value: LUIT CF Project EC2     
+  #   #   Tenancy: String
+  #     UserData:
+  #       # Fn::Base64: !Sub |
+  #       #     #!/bin/bash
+  #       #     yum install httpd -y
+  #       #     service httpd start  
+  #       #     echo "<html><body><h1>Questo sito è mostrato dalla regione ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
+  #       Fn::Base64: !Sub |
+  #         #!/bin/bash
+  #         sudo su
+  #         sudo apt-get update -y
+  #         sudo apt-get upgrade -y
+  #         sudo apt install nginx -y
+  #         sudo mkdir -m 777 -p /var/www/html
+  #         echo "<html><body><h1>Questo sito è mostrato dalla regione ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
+  #         cd /etc/nginx/sites-available
+  #         sudo bash -c 'echo "server {
+  #           listen 80;
+  #           listen [::]:80;
+  #           server_name mio-sito.com www.mio-sito.com;
+  #           # root /home/ubuntu/mio-sito.com;
+  #           root /var/www/html;
+  #           index index.html index.htm index.nginx-debian.html;
+  #           # try_files $uri $uri/ =404;
+  #         }" > mio-sito.com'
+  #         sudo ln -s /etc/nginx/sites-available/mio-sito.com /etc/nginx/sites-enabled/
+  #         sudo systemctl restart nginx
+  #   #   Volumes: 
+  #   #     - Volume
+
+  # EC2Instance2:
+  #   Type: AWS::EC2::Instance
+  #   Properties: 
+  #   #   AdditionalInfo: String
+  #   #   Affinity: String
+  #   #   AvailabilityZone: String
+  #   #   BlockDeviceMappings: 
+  #   #     - BlockDeviceMapping
+  #   #   CpuOptions: 
+  #   #     CpuOptions
+  #   #   CreditSpecification: 
+  #   #     CreditSpecification
+  #   #   DisableApiTermination: Boolean
+  #   #   EbsOptimized: Boolean
+  #   #   ElasticGpuSpecifications: 
+  #   #     - ElasticGpuSpecification
+  #   #   ElasticInferenceAccelerators: 
+  #   #     - ElasticInferenceAccelerator
+  #   #   EnclaveOptions: 
+  #   #     EnclaveOptions
+  #   #   HibernationOptions: 
+  #   #     HibernationOptions
+  #   #   HostId: String
+  #   #   HostResourceGroupArn: String
+  #   #   IamInstanceProfile: String
+  #     ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+  #   #   InstanceInitiatedShutdownBehavior: String
+  #     InstanceType: t2.micro
+  #   #   Ipv6AddressCount: Integer
+  #   #   Ipv6Addresses: 
+  #   #     - InstanceIpv6Address
+  #   #   KernelId: String
+  #     KeyName: !Ref KeyName
+  #   #   LaunchTemplate: 
+  #   #     LaunchTemplateSpecification
+  #   #   LicenseSpecifications: 
+  #   #     - LicenseSpecification
+  #   #   Monitoring: Boolean
+  #   #   NetworkInterfaces: 
+  #   #     - NetworkInterface
+  #   #   PlacementGroupName: String
+  #   #   PrivateDnsNameOptions: 
+  #   #     PrivateDnsNameOptions
+  #   #   PrivateIpAddress: String
+  #   #   PropagateTagsToVolumeOnCreation: Boolean
+  #   #   RamdiskId: String
+  #     SecurityGroupIds: 
+  #       - !Ref MySecurityGroup
+  #   #   SecurityGroups: 
+  #   #     - String
+  #   #   SourceDestCheck: Boolean
+  #   #   SsmAssociations: 
+  #   #     - SsmAssociation
+  #     SubnetId: !Ref PublicSubnet1
+  #     Tags:
+  #      - Key: Name
+  #        Value: LUIT CF Project EC2     
+  #   #   Tenancy: String
+  #     UserData:
+  #       # Fn::Base64: !Sub |
+  #       #     #!/bin/bash
+  #       #     yum install httpd -y
+  #       #     service httpd start  
+  #       #     echo "<html><body><h1>Questo sito è mostrato dalla regione ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
+  #       Fn::Base64: !Sub |
+  #         #!/bin/bash
+  #         sudo su
+  #         sudo apt-get update -y
+  #         sudo apt-get upgrade -y
+  #         sudo apt install nginx -y
+  #         sudo mkdir -m 777 -p /var/www/html
+  #         echo "<html><body><h1>Questo sito è mostrato dalla regione ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
+  #         cd /etc/nginx/sites-available
+  #         sudo bash -c 'echo "server {
+  #           listen 80;
+  #           listen [::]:80;
+  #           server_name mio-sito.com www.mio-sito.com;
+  #           # root /home/ubuntu/mio-sito.com;
+  #           root /var/www/html;
+  #           index index.html index.htm index.nginx-debian.html;
+  #           # try_files $uri $uri/ =404;
+  #         }" > mio-sito.com'
+  #         sudo ln -s /etc/nginx/sites-available/mio-sito.com /etc/nginx/sites-enabled/
+  #         sudo systemctl restart nginx
+  #   #   Volumes: 
+  #   #     - Volume
+  
+  MyTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 200
+      HealthCheckPath: /
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      # IpAddressType: String
+      Matcher:
+        HttpCode: 200,302
+      # Name: MyTargetGroup
+      Port: 80
+      Protocol: HTTP
+      # ProtocolVersion: String
+      # Tags: 
+      #   - Tag
+      # TargetGroupAttributes: 
+      #   - Key: Name
+      #     Value: vlll
+      # Targets:
+      #   - Id: !Ref EC2Instance
+      #     Port: 80
+      #   - Id: !Ref EC2Instance2
+      #     Port: 80
+      TargetType: instance
+      UnhealthyThresholdCount: 5
+      VpcId: !Ref VPC
+
+  MyLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: ipv4
+      # LoadBalancerAttributes: 
+      #   - LoadBalancerAttribute
+      Name: MyLoadBalancer
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref MySecurityGroup
+      # SubnetMappings: 
+      #   - SubnetMapping
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      # Tags: 
+      #   - Tag
+      Type: application
+
+  MyLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties: 
+      # AssociatePublicIpAddress: Boolean
+      # BlockDeviceMappings: 
+      #   - BlockDeviceMapping
+      # ClassicLinkVPCId: String
+      # ClassicLinkVPCSecurityGroups: 
+      #   - String
+      # EbsOptimized: Boolean
+      # IamInstanceProfile: String
+      ImageId: ami-09cd747c78a9add63
+      # InstanceId: String
+      # InstanceMonitoring: Boolean
+      InstanceType: t2.micro
+      # KernelId: String
+      KeyName: !Ref KeyName
+      # LaunchConfigurationName: String
+      # MetadataOptions: 
+      #   MetadataOptions
+      # PlacementTenancy: String
+      # RamDiskId: String
+      SecurityGroups:
+        - !Ref MySecurityGroup
+      # SpotPrice: String
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo su
+          sudo apt-get update -y
+          sudo apt-get upgrade -y
+          sudo apt install nginx -y
+          sudo mkdir -m 777 -p /var/www/html
+          echo "<html><body><h1>Questo sito è mostrato dalla regione ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
+          cd /etc/nginx/sites-available
+          sudo bash -c 'echo "server {
+            listen 80;
+            listen [::]:80;
+            server_name mio-sito.com www.mio-sito.com;
+            # root /home/ubuntu/mio-sito.com;
+            root /var/www/html;
+            index index.html index.htm index.nginx-debian.html;
+            # try_files $uri $uri/ =404;
+          }" > mio-sito.com'
+          sudo ln -s /etc/nginx/sites-available/mio-sito.com /etc/nginx/sites-enabled/
+          sudo systemctl restart nginx
+
+  # MyLaunchTemplate:
+  #   Type: AWS::EC2::LaunchTemplate
+  #   Properties: 
+  #     LaunchTemplateData:
+  #       # BlockDeviceMappings: 
+  #       #   - BlockDeviceMapping
+  #       # CapacityReservationSpecification: 
+  #       #   CapacityReservationSpecification
+  #       # CpuOptions: 
+  #       #   CpuOptions
+  #       # CreditSpecification: 
+  #       #   CreditSpecification
+  #       # DisableApiStop: Boolean
+  #       # DisableApiTermination: Boolean
+  #       # EbsOptimized: Boolean
+  #       # ElasticGpuSpecifications: 
+  #       #   - ElasticGpuSpecification
+  #       # ElasticInferenceAccelerators: 
+  #       #   - LaunchTemplateElasticInferenceAccelerator
+  #       # EnclaveOptions: 
+  #       #   EnclaveOptions
+  #       # HibernationOptions: 
+  #       #   HibernationOptions
+  #       # IamInstanceProfile: 
+  #       #   IamInstanceProfile
+  #       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+  #       # InstanceInitiatedShutdownBehavior: String
+  #       # InstanceMarketOptions: 
+  #       #   InstanceMarketOptions
+  #       # InstanceRequirements: 
+  #       #   InstanceRequirements
+  #       InstanceType: t2.micro
+  #       # KernelId: String
+  #       KeyName: !Ref KeyName
+  #       # LicenseSpecifications: 
+  #       #   - LicenseSpecification
+  #       # MaintenanceOptions: 
+  #       #   MaintenanceOptions
+  #       # MetadataOptions: 
+  #       #   MetadataOptions
+  #       # Monitoring: 
+  #       #   Monitoring
+  #       # NetworkInterfaces: 
+  #       #   - NetworkInterface
+  #       # Placement: 
+  #       #   Placement
+  #       # PrivateDnsNameOptions: 
+  #       #   PrivateDnsNameOptions
+  #       # RamDiskId: String
+  #       SecurityGroupIds: 
+  #         - !Ref MySecurityGroup
+  #       # SecurityGroups: 
+  #       #   - String
+  #       # TagSpecifications: 
+  #       #   - ResourceType: String
+  #       #     Tags: 
+  #       #       - Tag
+  #       UserData:
+  #       # Fn::Base64: !Sub |
+  #       #     #!/bin/bash
+  #       #     yum install httpd -y
+  #       #     service httpd start  
+  #       #     echo "<html><body><h1>Questo sito è mostrato dalla regione ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
+  #         Fn::Base64: !Sub |
+  #           #!/bin/bash
+  #           sudo su
+  #           sudo apt-get update -y
+  #           sudo apt-get upgrade -y
+  #           sudo apt install nginx -y
+  #           sudo mkdir -m 777 -p /var/www/html
+  #           echo "<html><body><h1>Questo sito è mostrato dalla regione ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
+  #           cd /etc/nginx/sites-available
+  #           sudo bash -c 'echo "server {
+  #             listen 80;
+  #             listen [::]:80;
+  #             server_name mio-sito.com www.mio-sito.com;
+  #             # root /home/ubuntu/mio-sito.com;
+  #             root /var/www/html;
+  #             index index.html index.htm index.nginx-debian.html;
+  #             # try_files $uri $uri/ =404;
+  #           }" > mio-sito.com'
+  #           sudo ln -s /etc/nginx/sites-available/mio-sito.com /etc/nginx/sites-enabled/
+  #           sudo systemctl restart nginx
+  #     # LaunchTemplateName: String
+  #     # TagSpecifications: 
+  #     #   - LaunchTemplateTagSpecification
+  #     # VersionDescription: String
+
+  MyAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties: 
+      AutoScalingGroupName: MyAutoScalingGroup
+    #   AvailabilityZone: String
+    #   CapacityRebalance: Boolean
+    #   Context: String
+    #   Cooldown: String
+    #   DefaultInstanceWarmup: Integer
+      DesiredCapacity: 2
+    #   DesiredCapacityType: String
+    #   HealthCheckGracePeriod: Integer
+    #   HealthCheckType: String
+      # InstanceId: !Ref EC2Instance
+      LaunchConfigurationName: !Ref MyLaunchConfiguration
+      # LaunchTemplate:
+      #   LaunchTemplateId: !Ref MyLaunchTemplate
+    #   LifecycleHookSpecificationList: 
+    #     - LifecycleHookSpecification
+    #   LoadBalancerNames: 
+    #     - String
+    #   MaxInstanceLifetime: Integer
+      MaxSize: 2    
+    #   MetricsCollection: 
+    #     - MetricsCollection
+      MinSize: 2
+    #   MixedInstancesPolicy: 
+    #     MixedInstancesPolicy
+    #   NewInstancesProtectedFromScaleIn: Boolean
+    #   NotificationConfigurations: 
+    #     - NotificationConfiguration
+    #   PlacementGroup: String
+    #   ServiceLinkedRoleARN: String
+      Tags: 
+        - Key: Name
+          PropagateAtLaunch: true
+          Value: ec2-autoscaling
+      TargetGroupARNs:
+        - !Ref MyTargetGroup
+    #   TerminationPolicies: 
+    #     - String
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet1
+
+  ALBListenerNoSslCertificate:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      # AlpnPolicy: 
+      #   - String
+      DefaultActions:
+        - RedirectConfig:
+            Host: '#{host}'
+            Path: '/#{path}'
+            Port: '443'
+            Protocol: HTTPS
+            StatusCode: HTTP_301
+          Type: redirect 
+      LoadBalancerArn: !Ref MyLoadBalancer
+      Port: 80
+      Protocol: HTTP 
+      # SslPolicy: String
+
+  ALBListenerSslCertificate:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      # AlpnPolicy: 
+      #   - String
+      Certificates:
+        - CertificateArn: !Ref AcmCertificate
+      DefaultActions:
+        - Type: forward 
+          TargetGroupArn: !Ref MyTargetGroup
+      LoadBalancerArn: !Ref MyLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      # SslPolicy: String
+
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      # AccessControl: Private | PublicRead | PublicReadWrite | AuthenticatedRead | LogDeliveryWrite | BucketOwnerRead | BucketOwnerFullControl
+      BucketName: claranet-s3
+      # CorsConfiguration: 
+      # LifecycleConfiguration: 
+      # NotificationConfiguration: 
+      # VersioningConfiguration: 
+      # WebsiteConfiguration: 
+      # Tags:
+      #   - Key: key
+      #     Value: value
+
+  MyRDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS database
+      # DBSubnetGroupName: String
+      SubnetIds: 
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: database subnets
+
+  MyRDS:
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      AllocatedStorage: 20 # !Ref DatabaseAllocatedStorage
+    #   AllowMajorVersionUpgrade: Boolean
+    #   AssociatedRoles: 
+    #     - DBInstanceRole
+    #   AutoMinorVersionUpgrade: Boolean
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      BackupRetentionPeriod: 0 # !Ref DatabaseBackupRetentionPeriod
+    #   CACertificateIdentifier: String
+    #   CertificateDetails: 
+    #     CertificateDetails
+    #   CertificateRotationRestart: Boolean
+    #   CharacterSetName: String
+    #   CopyTagsToSnapshot: Boolean
+    #   CustomIAMInstanceProfile: String
+    #   DBClusterIdentifier: String
+    #   DBClusterSnapshotIdentifier: String
+      DBInstanceClass: db.t2.micro # !Ref DatabaseInstanceClass
+      DBInstanceIdentifier: mysqdb # !Ref DatabaseInstanceIdentifier
+      DBName: dbname # !Ref DatabaseName
+      DBSubnetGroupName: !Ref MyRDSSubnetGroup
+    #   DBSecurityGroups: 
+    #     - String
+    #   DBSnapshotIdentifier: String
+    #   DBSubnetGroupName: String
+    #   DeleteAutomatedBackups: Boolean
+    #   DeletionProtection: Boolean
+    #   Domain: String
+    #   DomainIAMRoleName: String
+    #   EnableCloudwatchLogsExports: 
+    #     - String
+    #   EnableIAMDatabaseAuthentication: Boolean
+    #   EnablePerformanceInsights: Boolean
+    #   Endpoint: 
+    #     Endpoint
+      Engine: MySQL
+      EngineVersion: 8.0.32
+    #   Iops: Integer
+    #   KmsKeyId: String
+    #   LicenseModel: String
+    #   ManageMasterUserPassword: Boolean
+      MasterUsername: admin # !Ref DatabaseUser
+      MasterUserPassword: database88889 # !Ref DatabasePassword
+    #   MasterUserSecret: 
+    #     MasterUserSecret
+    #   MaxAllocatedStorage: Integer
+    #   MonitoringInterval: Integer
+    #   MonitoringRoleArn: String
+      MultiAZ: false # !Ref MultiAZDatabase
+    #   NcharCharacterSetName: String
+    #   NetworkType: String
+    #   OptionGroupName: String
+    #   PerformanceInsightsKMSKeyId: String
+    #   PerformanceInsightsRetentionPeriod: Integer
+    #   Port: String
+    #   PreferredBackupWindow: String
+    #   PreferredMaintenanceWindow: String
+    #   ProcessorFeatures: 
+    #     - ProcessorFeature
+    #   PromotionTier: Integer
+    #   PubliclyAccessible: Boolean
+    #   ReplicaMode: String
+    #   RestoreTime: String
+    #   SourceDBInstanceAutomatedBackupsArn: String
+    #   SourceDBInstanceIdentifier: String
+    #   SourceDbiResourceId: String
+    #   SourceRegion: String
+    #   StorageEncrypted: Boolean
+    #   StorageThroughput: Integer
+    #   StorageType: String
+    #   Tags: 
+    #     - Tag
+    #   Timezone: String
+    #   UseDefaultProcessorFeatures: Boolean
+    #   UseLatestRestorableTime: Boolean
+      # VPCSecurityGroups:
+      #   - Fn::ImportValue: !Sub ${ExportVpcStackName}-DataBaseSecurityGroup
+
+
+# Outputs:
+#   PublicIp:
+#     Description: EC2 Instance Public Ip
+#     Value: !GetAtt EC2Instance.PublicIp
