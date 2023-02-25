@@ -3,9 +3,6 @@ AWSTemplateFormatVersion: 2010-09-09
 # Description: Crea un bucket S3
 
 Parameters:
-  wordpressVersion:
-    Description: Nome della versione di wordpress
-    Type: String
 
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
@@ -232,9 +229,8 @@ Resources:
           bash mysql_secure_installation_auto.sh
           apt install php -y
           apt install wget -y
-          # wget https://wordpress.org/latest.tar.gz
+          wget https://wordpress.org/latest.tar.gz
           # wget https://wordpress.org/wordpress-6.0.3.tar.gz
-          !Sub https://wordpress.org/wordpress-${wordpressVersion}.tar.gz
           tar -xzvf latest.tar.gz
           cd wordpress
           mkdir -m 777 -p /var/www/html
@@ -265,6 +261,7 @@ Resources:
           CREATE USER 'wordpressuser'@'%' IDENTIFIED BY 'password';
           GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpressuser'@'%';
           exit
+
 
   MyAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -309,9 +306,3 @@ Resources:
       LoadBalancerArn: !Ref MyLoadBalancer
       Port: 443
       Protocol: HTTPS
-
-
-# Outputs:
-#   PublicIp:
-#     Description: EC2 Instance Public Ip
-#     Value: !GetAtt EC2Instance.PublicIp
