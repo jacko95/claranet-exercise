@@ -322,33 +322,6 @@ Resources:
     Properties: 
       BucketName: claranet-s3
 
-  MyRDSSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: Subnet group for RDS database
-      SubnetIds: 
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
-      Tags:
-        - Key: Name
-          Value: database subnets
-
-  MyRDS:
-    Type: AWS::RDS::DBInstance
-    Properties: 
-      AllocatedStorage: 20 # !Ref DatabaseAllocatedStorage
-      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
-      BackupRetentionPeriod: 0 # !Ref DatabaseBackupRetentionPeriod
-      DBInstanceClass: db.t2.micro # !Ref DatabaseInstanceClass
-      DBInstanceIdentifier: mysqdb # !Ref DatabaseInstanceIdentifier
-      DBName: dbname # !Ref DatabaseName
-      DBSubnetGroupName: !Ref MyRDSSubnetGroup
-      Engine: MySQL
-      EngineVersion: 8.0.32
-      MasterUsername: admin # !Ref DatabaseUser
-      MasterUserPassword: database88889 # !Ref DatabasePassword
-      MultiAZ: false # !Ref MultiAZDatabase
-
 
 # Outputs:
 #   PublicIp:
