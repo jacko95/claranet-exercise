@@ -4,7 +4,7 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
   wordpressVersion:
-    Description: The name of the vpc stack that exports values
+    Description: Nome della versione di wordpress
     Type: String
 
   KeyName:
@@ -15,16 +15,6 @@ Parameters:
   AcmCertificate:
     Description: The ARN of the AWS Certification Manager's Certificate 
     Type: String
-
-  InstanceType:
-    Description: WebServer EC2 instance type
-    Type: String
-    Default: t2.micro
-    AllowedValues:
-      - t3.micro
-      - t2.nano
-      - t2.micro
-    ConstraintDescription: must be a valid EC2 instance type.
 
 Mappings:
   RegionMap:
