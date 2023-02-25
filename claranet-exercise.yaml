@@ -511,24 +511,90 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
+          sudo apt remove needrestart -y
           sudo su
-          sudo apt-get update -y
-          sudo apt-get upgrade -y
-          sudo apt install nginx -y
-          sudo mkdir -m 777 -p /var/www/html
-          echo "<html><body><h1>Questo sito è mostrato dalla regione ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
-          cd /etc/nginx/sites-available
-          sudo bash -c 'echo "server {
-            listen 80;
-            listen [::]:80;
-            server_name mio-sito.com www.mio-sito.com;
-            # root /home/ubuntu/mio-sito.com;
-            root /var/www/html;
-            index index.html index.htm index.nginx-debian.html;
-            # try_files $uri $uri/ =404;
-          }" > mio-sito.com'
-          sudo ln -s /etc/nginx/sites-available/mio-sito.com /etc/nginx/sites-enabled/
-          sudo systemctl restart nginx
+          cd ~
+          apt update -y && apt upgrade -y
+          apt install apache2 -y
+          apt install mariadb-server mariadb-client -y
+          systemctl start mariadb
+          # mysql_secure_installation
+          # Enter current password for root (enter for none): calcio
+          # Switch to unix_socket authentication [Y/n] y
+          # Change the root password? [Y/n] n
+          # Remove anonymous users? [Y/n] y
+          # Disallow root login remotely? [Y/n] y
+          # Remove test database and access to it? [Y/n] y
+          # Reload privilege tables now? [Y/n] y
+          apt-get install expect -y
+          echo '''#!/bin/bash
+
+          SECURE_MYSQL=$(expect -c "
+
+          set timeout 10
+          spawn mysql_secure_installation
+
+          expect \"Enter current password for root (enter for none):\"
+          send \"calcio\r\"
+
+          expect \"Switch to unix_socket authentication\"
+          send \"y\r\"
+
+          expect \"Change the root password?\"
+          send \"n\r\"
+
+          expect \"Remove anonymous users?\"
+          send \"y\r\"
+
+          expect \"Disallow root login remotely?\"
+          send \"y\r\"
+
+          expect \"Remove test database and access to it?\"
+          send \"y\r\"
+
+          expect \"Reload privilege tables now?\"
+          send \"y\r\"
+
+          expect eof
+          ")
+
+          echo "$SECURE_MYSQL"
+          ''' > ~/mysql_secure_installation_auto.sh
+          bash mysql_secure_installation_auto.sh
+          apt install php -y
+          apt install wget -y
+          wget https://wordpress.org/latest.tar.gz
+          # wget https://wordpress.org/wordpress-6.0.3.tar.gz
+          tar -xzvf latest.tar.gz
+          cd wordpress
+          mkdir -m 777 -p /var/www/html
+          mv * /var/www/html/
+          cd /var/www/html/
+          rm -rf ~/wordpress
+          rm -rf index.html
+          sudo apt install php-mysql php-gd php-cgi php-cli -y
+          systemctl restart apache2
+          sudo chown -R www-data:www-data /var/www/html/wordpress
+          # mysql -u root -p
+          # Enter password: calcio
+          echo '''#!/bin/bash
+
+          expect -c "
+
+          set timeout 10
+          spawn mysql -u root -p
+
+          expect \"Enter password:\"
+          send \"calcio\r\"
+
+          expect eof
+          "
+          ''' > ~/mysql_first.sh
+          bash ~/mysql_first.sh | tee mysql_first.log
+          create database wordpress;
+          CREATE USER 'wordpressuser'@'%' IDENTIFIED BY 'password';
+          GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpressuser'@'%';
+          exit
 
   # MyLaunchTemplate:
   #   Type: AWS::EC2::LaunchTemplate
