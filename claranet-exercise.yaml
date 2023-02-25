@@ -1,7 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Description: Crea un bucket S3
-
 Parameters:
 
   KeyName:
@@ -184,14 +182,6 @@ Resources:
           apt install apache2 -y
           apt install mariadb-server mariadb-client -y
           systemctl start mariadb
-          # mysql_secure_installation
-          # Enter current password for root (enter for none): calcio
-          # Switch to unix_socket authentication [Y/n] y
-          # Change the root password? [Y/n] n
-          # Remove anonymous users? [Y/n] y
-          # Disallow root login remotely? [Y/n] y
-          # Remove test database and access to it? [Y/n] y
-          # Reload privilege tables now? [Y/n] y
           apt-get install expect -y
           echo '''#!/bin/bash
 
@@ -230,7 +220,6 @@ Resources:
           apt install php -y
           apt install wget -y
           wget https://wordpress.org/latest.tar.gz
-          # wget https://wordpress.org/wordpress-6.0.3.tar.gz
           tar -xzvf latest.tar.gz
           cd wordpress
           mkdir -m 777 -p /var/www/html
@@ -241,8 +230,6 @@ Resources:
           sudo apt install php-mysql php-gd php-cgi php-cli -y
           systemctl restart apache2
           sudo chown -R www-data:www-data /var/www/html/wordpress
-          # mysql -u root -p
-          # Enter password: calcio
           echo '''#!/bin/bash
 
           expect -c "
@@ -261,7 +248,6 @@ Resources:
           CREATE USER 'wordpressuser'@'%' IDENTIFIED BY 'password';
           GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpressuser'@'%';
           exit
-
 
   MyAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -306,3 +292,35 @@ Resources:
       LoadBalancerArn: !Ref MyLoadBalancer
       Port: 443
       Protocol: HTTPS
+
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: claranet-s3
+
+  MyRDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS database
+      SubnetIds: 
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: database subnets
+
+  MyRDS:
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      AllocatedStorage: 20
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      BackupRetentionPeriod: 0 
+      DBInstanceClass: db.t2.micro 
+      DBInstanceIdentifier: mysqdb 
+      DBName: dbname 
+      DBSubnetGroupName: !Ref MyRDSSubnetGroup
+      Engine: MySQL
+      EngineVersion: 8.0.32
+      MasterUsername: admin
+      MasterUserPassword: database88889
+      MultiAZ: false
