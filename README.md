@@ -1,61 +1,30 @@
 # AWS CloudFormation Template
 
-Questo template CloudFormation crea un'istanza EC2 con Nginx installato e un load balancer che distribuisce il traffico alle istanze EC2.
+Questo script di CloudFormation distribuisce un'infrastruttura di base in AWS per l'hosting di applicazioni Web. L'architettura è costituita da un cloud privato virtuale (VPC) con quattro sottoreti: due sottoreti pubblici e due privati. Le sottoreti pubbliche vengono utilizzate per l'hosting di un bilanciamento del carico e le sottoreti private vengono utilizzate per l'hosting dei server Web. Lo script crea anche un gateway Internet e lo allega al VPC per l'accesso a Internet, nonché un gruppo di sicurezza per consentire il traffico ai server Web.
 
 ## Prerequisiti
 
 - Un account AWS
 - Accesso alla console AWS o un client AWS CLI installato e configurato
 
-## Come usare
+## Come usarlo
 
-1. Accedi alla console AWS o apri il client AWS CLI.
-2. Creare una coppia di chiavi EC2 nel menu Key Pairs della console o con il comando `aws ec2 create-key-pair` del CLI.
-3. Scarica il file PEM contenente la tua chiave EC2 e conservalo in un luogo sicuro.
-4. Aprire il file `template.yml` e sostituire i valori `KeyName`, `PublicSubnet1`, `PublicSubnet2`, `VPC` e `MySecurityGroup` con i valori appropriati.
-5. Creare lo stack di CloudFormation usando il comando `aws cloudformation create-stack` o usando la console AWS.
-6. Attendere il completamento della creazione dello stack.
-7. Accedere all'indirizzo IP del bilanciatore di carico nella console EC2 o usando il comando `aws cloudformation describe-stacks` del CLI.
+1. Apri la console AWS CloudFormation.
+2. Scegli "Crea stack" e seleziona "con nuove risorse (standard)".
+3. Carica questo script di CloudFormation e seleziona "Crea stack".
+4. Nella pagina "Specifica i dettagli dello stack", fornire i parametri richiesti tra cui una chiave e un certificato ACM ARN.
+5. Rivedi i parametri e seleziona "Crea stack".
+6. Aspetta che lo stack completa la creazione. È possibile monitorare i progressi nella console CloudFormation AWS.
 
 ## Architettura
 
-- 1 istanza EC2 con Nginx installato
-- 1 gruppo di sicurezza EC2
-- 1 bilanciatore di carico che distribuisce il traffico alle istanze EC2
-
-### Architettura dettagliata
-
-- EC2 instance:
-  - Amazon Linux 2 AMI
-  - t2.micro instance type
-  - Nginx installed
-  - Launch configuration with User data script to configure Nginx and serve a basic HTML page
-- Security Group:
-  - Allows SSH access from anywhere
-  - Allows HTTP access from anywhere
-- Elastic Load Balancer:
-  - Application Load Balancer
-  - Internet-facing
-  - Listens on port 80
-  - Routes traffic to the EC2 instances in the target group
-- Target Group:
-  - Health check enabled
-  - Health check listens on port 80 and checks the root path
-  - Targets are the EC2 instances created by the Auto Scaling group
-
-## Template details
-
-### Resources
-
-- `EC2Instance`: Amazon EC2 instance running the specified Amazon Machine Image (AMI).
-- `MySecurityGroup`: Gruppo di sicurezza che consente l'accesso SSH e HTTP.
-- `MyTargetGroup`: Gruppo di destinazione per il bilanciatore di carico che controlla lo stato della salute dell'istanza EC2.
-- `MyLoadBalancer`: Bilanciatore di carico di applicazioni che distribuisce il traffico alle istanze EC2.
-- `MyLaunchConfiguration`: Configurazione di lancio per l'istanza EC2.
-
-### Outputs
-
-- `WebsiteURL`: L'URL del sito Web che utilizza il bilanciatore di carico.
-
-### Codice
-
+- VPC: definisce la Virtual Private Cloud per l'infrastruttura.
+- InternetGateway: definisce l'Internet Gateway per la VPC.
+- InternetGatewayAttachment: definisce l'associazione tra l'Internet Gateway e la VPC.
+- PublicSubnet1, PublicSubnet2, PrivateSubnet1, PrivateSubnet2: definiscono le subnet per la VPC. Le subnet pubbliche sono associate a una tabella di routing pubblica, mentre le subnet private sono associate a una tabella di routing privata.
+- PublicRouteTable: definisce la tabella di routing pubblica per la VPC.
+- DefaultPublicRoute: definisce la route predefinita per la tabella di routing pubblica.
+- PublicSubnet1RouteTableAssociation, PublicSubnet2RouteTableAssociation: definiscono l'associazione tra le subnet pubbliche e la tabella di routing pubblica.
+- MySecurityGroup: definisce il security group per la VPC.
+- MyTargetGroup: definisce il target group per il load balancer.
+- MyLoadBalancer: definisce il load balancer per la VPC.
