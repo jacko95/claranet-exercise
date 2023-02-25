@@ -3,6 +3,9 @@ AWSTemplateFormatVersion: 2010-09-09
 # Description: Crea un bucket S3
 
 Parameters:
+  wordpressVersion:
+    Description: The name of the vpc stack that exports values
+    Type: String
 
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
@@ -239,9 +242,9 @@ Resources:
           bash mysql_secure_installation_auto.sh
           apt install php -y
           apt install wget -y
-          wget https://wordpress.org/latest.tar.gz
+          # wget https://wordpress.org/latest.tar.gz
           # wget https://wordpress.org/wordpress-6.0.3.tar.gz
-          # !Sub https://wordpress.org/wordpress-${ExportVpcStackName}.tar.gz
+          !Sub https://wordpress.org/wordpress-${wordpressVersion}.tar.gz
           tar -xzvf latest.tar.gz
           cd wordpress
           mkdir -m 777 -p /var/www/html
