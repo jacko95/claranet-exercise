@@ -64,28 +64,6 @@ Resources:
         - Key: Name
           Value: LUIT CF Project Public Subnet (AZ2)
 
-  PrivateSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [0, !GetAZs  '']
-      CidrBlock: 10.0.11.0/24
-      MapPublicIpOnLaunch: false
-      Tags: 
-        - Key: Name
-          Value: LUIT CF Project Private Subnet (AZ1)
-
-  PrivateSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties: 
-      AvailabilityZone: !Select [1, !GetAZs  '']
-      CidrBlock: 10.0.12.0/24
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: LUIT CF Project Private Subnet (AZ2)
-      VpcId: !Ref VPC
-
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:

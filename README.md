@@ -21,7 +21,7 @@ Questo script di CloudFormation distribuisce un'infrastruttura di base in AWS pe
 - VPC: definisce la Virtual Private Cloud per l'infrastruttura.
 - InternetGateway: definisce l'Internet Gateway per la VPC.
 - InternetGatewayAttachment: definisce l'associazione tra l'Internet Gateway e la VPC.
-- PublicSubnet1, PublicSubnet2, PrivateSubnet1, PrivateSubnet2: definiscono le subnet per la VPC. Le subnet pubbliche sono associate a una tabella di routing pubblica, mentre le subnet private sono associate a una tabella di routing privata.
+- PublicSubnet1, PublicSubnet2: definiscono le subnet per la VPC. Le subnet pubbliche sono associate a una tabella di routing pubblica, mentre le subnet private sono associate a una tabella di routing privata.
 - PublicRouteTable: definisce la tabella di routing pubblica per la VPC.
 - DefaultPublicRoute: definisce la route predefinita per la tabella di routing pubblica.
 - PublicSubnet1RouteTableAssociation, PublicSubnet2RouteTableAssociation: definiscono l'associazione tra le subnet pubbliche e la tabella di routing pubblica.
