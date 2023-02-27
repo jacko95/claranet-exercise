@@ -1,6 +1,6 @@
 # AWS CloudFormation Template
 
-Questo script di CloudFormation distribuisce un'infrastruttura di base in AWS per l'hosting di applicazioni Web. L'architettura è costituita da un cloud privato virtuale (VPC) con quattro sottoreti: due sottoreti pubblici e due privati. Le sottoreti pubbliche vengono utilizzate per l'hosting di un bilanciamento del carico e le sottoreti private vengono utilizzate per l'hosting dei server Web. Lo script crea anche un gateway Internet e lo allega al VPC per l'accesso a Internet, nonché un gruppo di sicurezza per consentire il traffico ai server Web.
+Questo script di CloudFormation distribuisce un'infrastruttura di base in AWS per l'hosting di applicazioni Web. L'architettura è costituita da un cloud privato virtuale (VPC) con due sottoreti pubbliche. Le sottoreti pubbliche vengono utilizzate per l'hosting di un bilanciamento del carico e per l'hosting dei server Web. Lo script crea anche un gateway Internet e lo allega al VPC per l'accesso a Internet, nonché un gruppo di sicurezza per consentire il traffico ai server Web.
 
 ## Prerequisiti
 
@@ -17,6 +17,8 @@ Questo script di CloudFormation distribuisce un'infrastruttura di base in AWS pe
 6. Aspetta che lo stack completa la creazione. È possibile monitorare i progressi nella console CloudFormation AWS.
 
 ## Architettura
+
+![Immagine dell'architettura](template.png)
 
 - VPC: definisce la Virtual Private Cloud per l'infrastruttura.
 - InternetGateway: definisce l'Internet Gateway per la VPC.
